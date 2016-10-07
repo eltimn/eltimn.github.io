@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> JavaScript Apps With Lift: Organization &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/003-javascript-apps-with-lift-organization/">JavaScript Apps With Lift: Organization</a></h1>
+      <span class="post-date">Apr 3, 2013 </span>
+      <div class="post-content">
+        <p>With the goal of putting as much of our JavaScript code in external files and combing them into a single file, there are several ways to organize your code. A lot of developers are moving towards using an <a href="https://github.com/amdjs/amdjs-api/wiki/AMD">AMD</a> loader, in particular <a href="http://requirejs.org/">RequireJS</a> for webapps. With this, each of your JavaScript files will basically list the files it depends on and they are loaded by the loader. So, only the files you need are loaded. That&rsquo;s only recommended for development, though. For production, all of the files are combined using an optimizer.</p>
+
+<p>Another approach is to use a single global object to put all of your code into. This is to minimize polluting the global namespace. One problem with this approach is that you need to make sure you create the sub objects for each namespace. For example, if you had this:</p>
+
+<pre><code>window.App = {
+  utils: {},
+  views: {}
+};
+</code></pre>
+
+<p>And now, if you want to add a namespace in views, you would need to add:</p>
+
+<pre><code>window.App = {
+  utils: {},
+  views: {
+    user: {}
+  }
+};
+</code></pre>
+
+<p>One solution is to create a function that will create the namespace object if it&rsquo;s not already defined. I like to add this to the main App object. You can also pass in settings and run any initialization code in your App object. Here&rsquo;s a full example:</p>
+
+<pre><code>(function(window) {
+  window.App = (function() {
+    &quot;use strict&quot;;
+
+    // the instance to return
+    var inst = {};
+
+    inst.init = function(settings) {
+      inst.settings = settings;
+
+      // run any global init code here
+    };
+
+    /**
+      * A convenience function for parsing string namespaces and
+      * automatically generating nested namespace objects.
+      *
+      * Example:
+      * App.namespace('modules.module2');
+      *
+      */
+    inst.namespace = function(ns_string) {
+      var parts = ns_string.split('.'),
+          parent = inst,
+          pl;
+
+      pl = parts.length;
+      for (var i = 0; i &lt; pl; i++) {
+        // create a property if it doesnt exist
+        if (typeof parent[parts[i]] === 'undefined') {
+          parent[parts[i]] = {};
+        }
+        parent = parent[parts[i]];
+      }
+      return parent;
+    };
+
+    return inst;
+  }());
+})(this);
+</code></pre>
+
+<p>Now, in your external files you can just call this function to ensure the namespace exists and your files won&rsquo;t need to be loaded in a specific order, except, of course, the App.js file must be loaded first.</p>
+
+<pre><code>App.namespace(&quot;views.notice&quot;);
+App.views.notice.FormsTestAjax = (function(ko) {
+  &quot;use strict&quot;;
+
+  return {
+    init: function() {},
+    anObservable: ko.observable(&quot;hola&quot;)
+  };
+})(ko);
+</code></pre>
+
+<p>For more information on namespacing, see:</p>
+
+<ul>
+<li><a href="http://addyosmani.com/blog/essential-js-namespacing/">Essential JavaScript Namespacing</a></li>
+<li><a href="http://thanpol.as/javascript/development-using-namespaces/">Development Using Namespaces</a></li>
+</ul>
+
+<p>Now that we have a place to put our JavaScript code, I&rsquo;ll discuss ways to actually write code. In general, I use a single JavaScript file per Lift snippet. These go in the <code>views</code> namespace. I also put some utilities in the <code>utils</code> namespace that are used by view classes.</p>
+
+<p>There are two different ways you can write your code; as a <a href="http://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript">module</a>, or as a &ldquo;class&rdquo;. I use quotes around class because, technically, JavaScript doesn&rsquo;t support classes. But using the <code>new</code> keyword essentially creates an instance of a class.</p>
+
+<p>I think of a module as more of a singleton object, so I mostly us it for utility functions. With modules, it&rsquo;s also more difficult to reuse code. On the other hand, classes provide opportunities for using <a href="http://javascriptweblog.wordpress.com/2011/05/31/a-fresh-look-at-javascript-mixins/">mixins</a>.</p>
+
+<p>The <a href="https://github.com/eltimn/lift-extras">Lift Extras module</a> has an example of each. First, the module version:</p>
+
+<p><a href="https://github.com/eltimn/lift-extras/blob/master/example/src/main/javascript/views/knockout/KnockoutExampleMod.js">KnockoutExampleMod.js</a></p>
+
+<pre><code>App.namespace(&quot;views.knockout&quot;);
+App.views.knockout.KnockoutExampleMod = (function($, ko) {
+  &quot;use strict&quot;;
+
+  // private stuff
+  var saveFunc = function() {};
+
+  // the instance to return
+  var inst = {};
+
+  inst.init = function(_saveFunc, _sendSuccess) {
+    saveFunc = _saveFunc;
+    inst.sendSuccess = _sendSuccess;
+  };
+
+  inst.textInput = ko.observable(&quot;&quot;);
+
+  inst.submitForm = function() {
+    var ret = { textInput: inst.textInput() };
+    // call the passed in save function with the form data as an argument.
+    saveFunc(ret);
+  };
+
+  inst.sendSuccess = function() {};
+
+  inst.showWarning = function() {
+    // sends a notice to the client
+    $(document).trigger(&quot;add-alerts&quot;, {message: &quot;This is a warning!&quot;, priority: &quot;warning&quot;});
+  };
+
+  return inst;
+}(jQuery, ko));
+</code></pre>
+
+<p>This is then called like this:</p>
+
+<pre><code>App.views.knockout.KnockoutExampleMod.init(...);
+App.views.knockout.KnockoutExampleMod.showWarning();
+</code></pre>
+
+<p>The class version looks like this:</p>
+
+<p><a href="https://github.com/eltimn/lift-extras/blob/master/example/src/main/javascript/views/knockout/KnockoutExampleCls.js">KnockoutExampleCls.js</a></p>
+
+<pre><code>App.namespace(&quot;views.knockout&quot;);
+App.views.knockout.KnockoutExampleCls = function(saveFunc, sendSuccess) {
+  &quot;use strict&quot;;
+
+  var self = this;
+
+  self.textInput = ko.observable(&quot;&quot;);
+
+  self.submitForm = function() {
+    var ret = { textInput: self.textInput() };
+    // call the passed in save function with the form data as an argument.
+    saveFunc(ret);
+  };
+
+  self.sendSuccess = sendSuccess;
+
+  self.showWarning = function() {
+    // sends a notice to the client
+    $(document).trigger(&quot;add-alerts&quot;, {message: &quot;&lt;em&gt;This is a warning!&lt;/em&gt;&quot;, priority: &quot;warning&quot;});
+  };
+};
+</code></pre>
+
+<p>Which is called like this:</p>
+
+<pre><code>window.koExample = new App.views.knockout.KnockoutExampleMod(...);
+window.koExample.showWarning();
+</code></pre>
+
+<p>One drawback is you need to specify a global variable to attach the instance too.</p>
+
+<p>Other resources:</p>
+
+<ul>
+<li><a href="https://speakerdeck.com/anguscroll/how-we-learned-to-stop-worrying-and-love-javascript">How we Learned to Stop Worrying and Love JavaScript</a></li>
+</ul>
+
+<div data-lift="embed?what=/templates-hidden/parts/js-lift-series"></div>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+      
+      <a class="btn previous " href="/post/002-javascript-apps-with-lift-best-practices/"> JavaScript Apps With Lift: Best Practices </a> 
+       
+      
+      <a class="btn next " href="/post/004-javascript-apps-with-lift-callback-functions/"> JavaScript Apps With Lift: Callback Functions </a> 
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>

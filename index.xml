@@ -1,0 +1,740 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>eltimn</title>
+    <link>/</link>
+    <description>Recent content on eltimn</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 08 Jun 2013 14:59:45 -0500</lastBuildDate>
+    <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Parallel MongoRecord test execution with ScalaTest</title>
+      <link>/post/007-parallel-mongorecord-test-execution/</link>
+      <pubDate>Sat, 08 Jun 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/007-parallel-mongorecord-test-execution/</guid>
+      <description>&lt;p&gt;A few weeks ago, I finally figured out a way to enable parallel test execution of Lift MongoRecords using ScalaTest. The problem is when you call &lt;code&gt;MongoDB.defineDb&lt;/code&gt; the entry is added to a Map with the MongoIdentifier as the key. So, you can&amp;rsquo;t add more than one entry for the same MongoIdentifer, which means you can&amp;rsquo;t use a different database for testing without doing them one at a time.&lt;/p&gt;
+
+&lt;p&gt;The solution is rather simple and involves Lift&amp;rsquo;s &lt;a href=&#34;http://simply.liftweb.net/index-8.2.html#toc-Section-8.2&#34;&gt;Dependency Injection mechanism&lt;/a&gt;. It allows us to use a different MongoIdentifier for each test suite.&lt;/p&gt;
+
+&lt;p&gt;First we need to define an injectable MongoIdentifier to add to our model&amp;rsquo;s MongoMetaRecord. I put this in a MongoConfig object:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;package code
+package config
+
+import net.liftweb._
+import http.Factory
+import mongodb._
+
+object MongoConfig extends Factory {
+
+  val identifier = new FactoryMaker[MongoIdentifier](DefaultMongoIdentifier) {}
+
+  ...
+
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Next we need to override &lt;code&gt;def mongoIdentifier&lt;/code&gt; in our MongoMetaRecord objects. I create a custom MongoMetaRecord trait where I do this and mix that into my models instead of MongoMetaRecord:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;package code
+package lib
+
+import code.config.MongoConfig
+
+import net.liftweb._
+import mongodb.record._
+
+/**
+  * A custom MongoMetaRecord that adds an injectable MongoIdentifier.
+  */
+trait MyMetaRecord[A &amp;lt;: MongoRecord[A]] extends MongoMetaRecord[A] {
+  this: A =&amp;gt;
+
+  override def mongoIdentifier = MongoConfig.identifier.vend
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Here&amp;rsquo;s an example model that uses the above trait:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;package code
+package model
+
+import code.lib.MyMetaRecord
+
+import scala.xml._
+
+import net.liftweb._
+import common._
+import mongodb.record._
+import record.field._
+
+class Company private () extends MongoRecord[Company] with ObjectIdPk[Company] {
+  def meta = Company
+
+  object name extends StringField(this, 256) {
+    override def displayName = &amp;quot;Name&amp;quot;
+
+    override def validations =
+      valMinLen(3, &amp;quot;Must be at least 3 characters&amp;quot;) _ ::
+      valMaxLen(256, &amp;quot;Must be 256 characters or less&amp;quot;) _ ::
+      super.validations
+  }
+}
+
+object Company extends Company with MyMetaRecord[Company] {
+  import mongodb.BsonDSL._
+
+  override def collectionName = &amp;quot;main.companies&amp;quot;
+
+  ensureIndex((name.name -&amp;gt; 1), true)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now, you can use the Mongo Suite&amp;rsquo;s defined in &lt;a href=&#34;https://github.com/eltimn/lift-mongo.g8/blob/master/src/main/g8/src/test/scala/%24package%24/MongoTestKit.scala&#34;&gt;MongoTestKit.scala&lt;/a&gt; to create some traits to use with your tests:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;package code
+
+import config.MongoConfig
+
+import org.scalatest._
+import org.scalatest.matchers.ShouldMatchers
+
+import net.liftweb._
+import common._
+import http._
+import util._
+import Helpers._
+
+trait BaseWordSpec extends WordSpec with ShouldMatchers
+
+trait BaseMongoWordSpec extends BaseWordSpec with MongoSuite {
+  def mongoIdentifier = MongoConfig.identifier
+}
+trait BaseMongoSessionWordSpec extends BaseWordSpec with MongoSessionSuite {
+  def mongoIdentifier = MongoConfig.identifier
+}
+
+trait WithSessionSpec extends AbstractSuite { this: Suite =&amp;gt;
+
+  protected def session = new LiftSession(&amp;quot;&amp;quot;, randomString(20), Empty)
+
+  abstract override def withFixture(test: NoArgTest) {
+    S.initIfUninitted(session) { super.withFixture(test) }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And, finally, write some tests:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;package code
+package model
+
+class CompanySpec extends BaseMongoSessionWordSpec {
+  &amp;quot;Company&amp;quot; should {
+    ...
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The above code is available in the &lt;a href=&#34;https://github.com/eltimn/lift-mongo.g8&#34;&gt;lift-mongo.g8&lt;/a&gt; giter8 template.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Apps With Lift: Build Tools</title>
+      <link>/post/006-javascript-apps-with-lift-callback-build-tools/</link>
+      <pubDate>Sat, 06 Apr 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/006-javascript-apps-with-lift-callback-build-tools/</guid>
+      <description>
+
+&lt;p&gt;Now that we know how to organize and write our JavaScript code, we need a way to build our single file for use in production. There are several ways you can do this.&lt;/p&gt;
+
+&lt;h3 id=&#34;scala-build-tool:cf77155f1101ac8e538c7ed4b09e695d&#34;&gt;Scala Build Tool&lt;/h3&gt;
+
+&lt;p&gt;Most build tools have plugins for this, whether you&amp;rsquo;re using SBT, Maven, or Gradle. I&amp;rsquo;m an SBT user, so I&amp;rsquo;ve been using &lt;a href=&#34;https://github.com/eltimn/sbt-closure&#34;&gt;sbt-closure&lt;/a&gt; and &lt;a href=&#34;https://github.com/softprops/less-sbt&#34;&gt;less-sbt&lt;/a&gt;. However, these are extremely slow, the SBT plugins, that is. I haven&amp;rsquo;t used the other build tools. Also, it&amp;rsquo;s not necessary to run google closure every time a change is made. This really only needs to be done once, when packaging for deployment.&lt;/p&gt;
+
+&lt;h3 id=&#34;sbt-resource-management-https-github-com-shadowfiend-sbt-resource-management:cf77155f1101ac8e538c7ed4b09e695d&#34;&gt;&lt;a href=&#34;https://github.com/Shadowfiend/sbt-resource-management&#34;&gt;sbt-resource-management&lt;/a&gt;&lt;/h3&gt;
+
+&lt;p&gt;This is a sbt plugin along with a snippet to be used in your Lift app. It allows you to define bundles of files, which the snippet either loads indvidually or as a single file, depending on whether you&amp;rsquo;re in development or production mode. The only problem I had with this was that I use Twitter Bootstrap&amp;rsquo;s less source files and there isn&amp;rsquo;t a way to specify a single file to process. It only has a directory setting. So it processes all of the less files instead of only the single file that I need processed.&lt;/p&gt;
+
+&lt;h3 id=&#34;grunt-http-gruntjs-com:cf77155f1101ac8e538c7ed4b09e695d&#34;&gt;&lt;a href=&#34;http://gruntjs.com/&#34;&gt;Grunt&lt;/a&gt;&lt;/h3&gt;
+
+&lt;p&gt;Grunt is a build tool written in JavaScript as a Node module. It requires Node and npm, but it&amp;rsquo;s super fast at concatenating JavaScript files and compiling LESS sources. It&amp;rsquo;s also pretty easy to learn how to us if you already know JavaScript.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/eltimn/lift-extras/tree/master/example&#34;&gt;Lift Extras example app&lt;/a&gt; uses Grunt for building the JavaScript and CSS. In addition to concatenating JavaScript files and compiling LESS sources it has tasks that runs a &lt;code&gt;linter&lt;/code&gt; on your JavaScript code via &lt;a href=&#34;http://www.jshint.com/&#34;&gt;JsHint&lt;/a&gt;, runs your JavaScript tests via &lt;a href=&#34;http://pivotal.github.io/jasmine/&#34;&gt;Jasmine&lt;/a&gt;, and minifies your JavaScript via &lt;a href=&#34;http://lisperator.net/uglifyjs/&#34;&gt;UglifyJs&lt;/a&gt;. It also has a watch task that will &amp;ldquo;compile&amp;rdquo; your code when any files change. So it will run automatically when you save the file in your editor.&lt;/p&gt;
+
+&lt;p&gt;See the app&amp;rsquo;s &lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/example/Gruntfile.js&#34;&gt;Gruntfile.js&lt;/a&gt; for more details.&lt;/p&gt;
+
+&lt;p&gt;This is currently my preferred tool to use. The only problem I&amp;rsquo;ve run into is that I use SBT to generate a package.json file that is used by Grunt to create the files. Sometimes, the two can get out of sync.&lt;/p&gt;
+
+&lt;p&gt;You may also want to check out &lt;a href=&#34;http://twitter.github.io/bower/&#34;&gt;Bower&lt;/a&gt;. It&amp;rsquo;s a dependency manager for JavaScript and CSS.&lt;/p&gt;
+
+&lt;div data-lift=&#34;embed?what=/templates-hidden/parts/js-lift-series&#34;&gt;&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Apps With Lift: JsClass</title>
+      <link>/post/005-javascript-apps-with-lift-callback-jsclass/</link>
+      <pubDate>Fri, 05 Apr 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/005-javascript-apps-with-lift-callback-jsclass/</guid>
+      <description>&lt;p&gt;The &lt;a href=&#34;https://github.com/eltimn/lift-extras&#34;&gt;Lift Extras&lt;/a&gt; module adds some convenience classes to help with interfacing between your Scala snippet code and your JavaScript code.&lt;/p&gt;
+
+&lt;p&gt;In my &lt;a href=&#34;http://www.eltimn.com/blog/004-javascript-apps-with-lift-callback-functions&#34;&gt;last post&lt;/a&gt; the code used to initialize the JavaScript code from within the snippet looked like this (minus the knockout binding call):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;val onload: JsCmd =
+  SetExp(
+    JsVar(&amp;quot;window.koExample&amp;quot;),
+    JsExtras.CallNew(
+      &amp;quot;App.views.knockout.KnockoutExampleCls&amp;quot;,
+      JsExtras.AjaxCallbackAnonFunc(sendSucces),
+      JsExtras.JsonCallbackAnonFunc(saveForm),
+    )
+  )
+)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Elsewhere, there&amp;rsquo;s a call to a function on the JavaScript class:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Call(&amp;quot;window.koExample.textInput&amp;quot;, Str(&amp;quot;&amp;quot;))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There are a couple of things that bother me about this. &lt;code&gt;window.koExample&lt;/code&gt; is referenced in multiple places. The &lt;code&gt;SetExp&lt;/code&gt; call is similar for all JavaScript classes.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsClass.scala&#34;&gt;JsClass and KoClass&lt;/a&gt; aim to help with those things. They provide a way to encapsulate some of the details of your JavaScript code and functions for calling functions on your JavaScript code. Using JsClass would change the above code to:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;val jsClass = JsClass(&amp;quot;App.views.knockout.KnockoutExampleCls&amp;quot;, &amp;quot;window.koExample&amp;quot;)
+
+val onload: JsCmd = jsClass.init(
+  JsExtras.AjaxCallbackAnonFunc(sendSucces),
+  JsExtras.JsonCallbackAnonFunc(saveForm)
+)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And, where you need to call a function on your JavaScript class use:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;jsClass.call(&amp;quot;textInput&amp;quot;, Str(&amp;quot;&amp;quot;))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There is a also a &lt;a href=&#34;http://knockoutjs.com/&#34;&gt;knockout.js&lt;/a&gt; version, KoClass, that adds the ko binding call to the init function. The above example would look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;val koClass = KoClass(&amp;quot;App.views.knockout.KnockoutExampleCls&amp;quot;, &amp;quot;window.koExample&amp;quot;, &amp;quot;knockout-example-cls&amp;quot;)
+
+val onload: JsCmd = koClass.init(
+  JsExtras.AjaxCallbackAnonFunc(sendSucces),
+  JsExtras.JsonCallbackAnonFunc(saveForm)
+)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Similar classes also exist for the module versions of the above: &lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsModule.scala&#34;&gt;JsModule and KoModule&lt;/a&gt;&lt;/p&gt;
+
+&lt;div data-lift=&#34;embed?what=/templates-hidden/parts/js-lift-series&#34;&gt;&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Apps With Lift: Callback Functions</title>
+      <link>/post/004-javascript-apps-with-lift-callback-functions/</link>
+      <pubDate>Thu, 04 Apr 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/004-javascript-apps-with-lift-callback-functions/</guid>
+      <description>&lt;p&gt;One of my favorite features of Lift is the ability to call functions on the server via ajax. This is mostly achieved using built in features. However, I also like to be able to call these functions via JavaScript directly. So, I created some functions to help with this.&lt;/p&gt;
+
+&lt;p&gt;First, let&amp;rsquo;s take a look at &lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsExtras.scala&#34; title=&#34;JsExtras&#34;&gt;AjaxCallbackAnonFunc&lt;/a&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt; object AjaxCallbackAnonFunc {
+    def apply(callback: () =&amp;gt; JsCmd): AnonFunc = {
+      val funcCmd = S.fmapFunc(S.SFuncHolder(s =&amp;gt; callback()))(name =&amp;gt;
+        SHtml.makeAjaxCall(JsRaw(&amp;quot;&#39;&amp;quot; + name + &amp;quot;=true&#39;&amp;quot;))
+      )
+      AnonFunc(funcCmd)
+    }
+  }
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This creates an anonymous JavaScript function that calls the callback function via Ajax and executes the return JsCmd on the client.&lt;/p&gt;
+
+&lt;p&gt;There is also &lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsExtras.scala&#34; title=&#34;JsExtras&#34;&gt;JsonCallbackAnonFunc&lt;/a&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;object JsonCallbackAnonFunc {
+  def apply(callback: JValue =&amp;gt; JsCmd): AnonFunc = {
+    val funcCmd = S.fmapFunc(S.SFuncHolder(s =&amp;gt; LiftExtras.parseJsonFunc.vend(s, callback)))(name =&amp;gt;
+      SHtml.makeAjaxCall(JsRaw(&amp;quot;&#39;&amp;quot; + name + &amp;quot;=&#39; + encodeURIComponent(JSON.stringify(data))&amp;quot;))
+    )
+    AnonFunc(&amp;quot;data&amp;quot;, funcCmd)
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This creates an anonymous JavaScript function that takes JSON data as a parameter and sends it to a callback function via Ajax and executes the return JsCmd on the client.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s an example snippet that uses both:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;object KnockoutExampleCls extends SnippetHelper with Loggable {
+
+  def render(in: NodeSeq): NodeSeq = {
+    /**
+      * A test function that sends a success notice back to the client.
+      */
+    def sendSuccess(): JsCmd = LiftNotice.success(&amp;lt;em&amp;gt;You have success&amp;lt;/em&amp;gt;).asJsCmd
+
+    /**
+      * The function to call when submitting the form.
+      */
+    def saveForm(json: JValue): JsCmd = {
+      for {
+        msg &amp;lt;- tryo((json \ &amp;quot;textInput&amp;quot;).extract[String])
+      } yield {
+        val logMsg = &amp;quot;textInput from client: &amp;quot;+msg
+        logger.info(logMsg)
+        S.notice(logMsg)
+        Call(&amp;quot;window.koExample.textInput&amp;quot;, Str(&amp;quot;&amp;quot;)): JsCmd
+      }
+    }
+
+    /**
+      * Initialize the knockout view model, passing it the anonymous functions
+      */
+    val onload: JsCmd =
+      SetExp(
+        JsVar(&amp;quot;window.koExample&amp;quot;),
+        JsExtras.CallNew(
+          &amp;quot;App.views.knockout.KnockoutExampleCls&amp;quot;,
+          JsExtras.AjaxCallbackAnonFunc(sendSucces),
+          JsExtras.JsonCallbackAnonFunc(saveForm),
+        )
+      ) &amp;amp;
+      Call(&amp;quot;ko.applyBindings&amp;quot;, JsVar(&amp;quot;window.koExample&amp;quot;), Call(&amp;quot;document.getElementById&amp;quot;, &amp;quot;knockout-example-cls&amp;quot;))
+    )
+
+    S.appendJs(onload)
+
+    in
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which outputs the following JavaScript:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;script type=&amp;quot;text/javascript&amp;quot;&amp;gt;
+// &amp;lt;![CDATA[
+jQuery(document).ready(function() {
+  window.koExample = new App.views.knockout.KnockoutExampleCls(
+    function() {
+      liftAjax.lift_ajaxHandler(&#39;F301359182285033KTB=true&#39;, null, null, null);
+    },
+    function(data) {
+      liftAjax.lift_ajaxHandler(&#39;F301359182286FERFGB=&#39; + encodeURIComponent(JSON.stringify(data)), null, null, null);
+    }
+  );
+  ko.applyBindings(window.koExample, document.getElementById(&amp;quot;knockout-example-cls&amp;quot;));
+// ]]&amp;gt;
+&amp;lt;/script&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The JavaScript view model class is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;App.namespace(&amp;quot;views.knockout&amp;quot;);
+App.views.knockout.KnockoutExampleCls = function(sendSuccess, saveFunc) {
+  &amp;quot;use strict&amp;quot;;
+
+  var self = this;
+
+  self.textInput = ko.observable(&amp;quot;&amp;quot;);
+
+  self.submitForm = function() {
+    var ret = { textInput: self.textInput() };
+    // call the passed in save function with the form data as an argument.
+    saveFunc(ret);
+  };
+
+  self.sendSuccess = sendSuccess;
+
+  self.showWarning = function() {
+    // sends a notice to the client
+    $(document).trigger(&amp;quot;add-alerts&amp;quot;, {message: &amp;quot;&amp;lt;em&amp;gt;This is a warning!&amp;lt;/em&amp;gt;&amp;quot;, priority: &amp;quot;warning&amp;quot;});
+  };
+};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Notice how the functions are passed into the JavaScript code as parameters to the view model class. You now have the ability to call either of these functions in your JavaScript code.&lt;/p&gt;
+
+&lt;p&gt;I like this technique because all of your code is in one place and you can close over any data you may need in the snippet. It may not be as secure as some of Lift&amp;rsquo;s built in stuff, but it&amp;rsquo;s still more secure and faster and easier to write than calling APIs directly. However, if you need to provide a public API anyway it may make sense to use that.&lt;/p&gt;
+
+&lt;div data-lift=&#34;embed?what=/templates-hidden/parts/js-lift-series&#34;&gt;&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Apps With Lift: Organization</title>
+      <link>/post/003-javascript-apps-with-lift-organization/</link>
+      <pubDate>Wed, 03 Apr 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/003-javascript-apps-with-lift-organization/</guid>
+      <description>&lt;p&gt;With the goal of putting as much of our JavaScript code in external files and combing them into a single file, there are several ways to organize your code. A lot of developers are moving towards using an &lt;a href=&#34;https://github.com/amdjs/amdjs-api/wiki/AMD&#34;&gt;AMD&lt;/a&gt; loader, in particular &lt;a href=&#34;http://requirejs.org/&#34;&gt;RequireJS&lt;/a&gt; for webapps. With this, each of your JavaScript files will basically list the files it depends on and they are loaded by the loader. So, only the files you need are loaded. That&amp;rsquo;s only recommended for development, though. For production, all of the files are combined using an optimizer.&lt;/p&gt;
+
+&lt;p&gt;Another approach is to use a single global object to put all of your code into. This is to minimize polluting the global namespace. One problem with this approach is that you need to make sure you create the sub objects for each namespace. For example, if you had this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;window.App = {
+  utils: {},
+  views: {}
+};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And now, if you want to add a namespace in views, you would need to add:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;window.App = {
+  utils: {},
+  views: {
+    user: {}
+  }
+};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;One solution is to create a function that will create the namespace object if it&amp;rsquo;s not already defined. I like to add this to the main App object. You can also pass in settings and run any initialization code in your App object. Here&amp;rsquo;s a full example:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;(function(window) {
+  window.App = (function() {
+    &amp;quot;use strict&amp;quot;;
+
+    // the instance to return
+    var inst = {};
+
+    inst.init = function(settings) {
+      inst.settings = settings;
+
+      // run any global init code here
+    };
+
+    /**
+      * A convenience function for parsing string namespaces and
+      * automatically generating nested namespace objects.
+      *
+      * Example:
+      * App.namespace(&#39;modules.module2&#39;);
+      *
+      */
+    inst.namespace = function(ns_string) {
+      var parts = ns_string.split(&#39;.&#39;),
+          parent = inst,
+          pl;
+
+      pl = parts.length;
+      for (var i = 0; i &amp;lt; pl; i++) {
+        // create a property if it doesnt exist
+        if (typeof parent[parts[i]] === &#39;undefined&#39;) {
+          parent[parts[i]] = {};
+        }
+        parent = parent[parts[i]];
+      }
+      return parent;
+    };
+
+    return inst;
+  }());
+})(this);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now, in your external files you can just call this function to ensure the namespace exists and your files won&amp;rsquo;t need to be loaded in a specific order, except, of course, the App.js file must be loaded first.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;App.namespace(&amp;quot;views.notice&amp;quot;);
+App.views.notice.FormsTestAjax = (function(ko) {
+  &amp;quot;use strict&amp;quot;;
+
+  return {
+    init: function() {},
+    anObservable: ko.observable(&amp;quot;hola&amp;quot;)
+  };
+})(ko);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;For more information on namespacing, see:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;http://addyosmani.com/blog/essential-js-namespacing/&#34;&gt;Essential JavaScript Namespacing&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://thanpol.as/javascript/development-using-namespaces/&#34;&gt;Development Using Namespaces&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Now that we have a place to put our JavaScript code, I&amp;rsquo;ll discuss ways to actually write code. In general, I use a single JavaScript file per Lift snippet. These go in the &lt;code&gt;views&lt;/code&gt; namespace. I also put some utilities in the &lt;code&gt;utils&lt;/code&gt; namespace that are used by view classes.&lt;/p&gt;
+
+&lt;p&gt;There are two different ways you can write your code; as a &lt;a href=&#34;http://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript&#34;&gt;module&lt;/a&gt;, or as a &amp;ldquo;class&amp;rdquo;. I use quotes around class because, technically, JavaScript doesn&amp;rsquo;t support classes. But using the &lt;code&gt;new&lt;/code&gt; keyword essentially creates an instance of a class.&lt;/p&gt;
+
+&lt;p&gt;I think of a module as more of a singleton object, so I mostly us it for utility functions. With modules, it&amp;rsquo;s also more difficult to reuse code. On the other hand, classes provide opportunities for using &lt;a href=&#34;http://javascriptweblog.wordpress.com/2011/05/31/a-fresh-look-at-javascript-mixins/&#34;&gt;mixins&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/eltimn/lift-extras&#34;&gt;Lift Extras module&lt;/a&gt; has an example of each. First, the module version:&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/example/src/main/javascript/views/knockout/KnockoutExampleMod.js&#34;&gt;KnockoutExampleMod.js&lt;/a&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;App.namespace(&amp;quot;views.knockout&amp;quot;);
+App.views.knockout.KnockoutExampleMod = (function($, ko) {
+  &amp;quot;use strict&amp;quot;;
+
+  // private stuff
+  var saveFunc = function() {};
+
+  // the instance to return
+  var inst = {};
+
+  inst.init = function(_saveFunc, _sendSuccess) {
+    saveFunc = _saveFunc;
+    inst.sendSuccess = _sendSuccess;
+  };
+
+  inst.textInput = ko.observable(&amp;quot;&amp;quot;);
+
+  inst.submitForm = function() {
+    var ret = { textInput: inst.textInput() };
+    // call the passed in save function with the form data as an argument.
+    saveFunc(ret);
+  };
+
+  inst.sendSuccess = function() {};
+
+  inst.showWarning = function() {
+    // sends a notice to the client
+    $(document).trigger(&amp;quot;add-alerts&amp;quot;, {message: &amp;quot;This is a warning!&amp;quot;, priority: &amp;quot;warning&amp;quot;});
+  };
+
+  return inst;
+}(jQuery, ko));
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is then called like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;App.views.knockout.KnockoutExampleMod.init(...);
+App.views.knockout.KnockoutExampleMod.showWarning();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The class version looks like this:&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/example/src/main/javascript/views/knockout/KnockoutExampleCls.js&#34;&gt;KnockoutExampleCls.js&lt;/a&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;App.namespace(&amp;quot;views.knockout&amp;quot;);
+App.views.knockout.KnockoutExampleCls = function(saveFunc, sendSuccess) {
+  &amp;quot;use strict&amp;quot;;
+
+  var self = this;
+
+  self.textInput = ko.observable(&amp;quot;&amp;quot;);
+
+  self.submitForm = function() {
+    var ret = { textInput: self.textInput() };
+    // call the passed in save function with the form data as an argument.
+    saveFunc(ret);
+  };
+
+  self.sendSuccess = sendSuccess;
+
+  self.showWarning = function() {
+    // sends a notice to the client
+    $(document).trigger(&amp;quot;add-alerts&amp;quot;, {message: &amp;quot;&amp;lt;em&amp;gt;This is a warning!&amp;lt;/em&amp;gt;&amp;quot;, priority: &amp;quot;warning&amp;quot;});
+  };
+};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which is called like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;window.koExample = new App.views.knockout.KnockoutExampleMod(...);
+window.koExample.showWarning();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;One drawback is you need to specify a global variable to attach the instance too.&lt;/p&gt;
+
+&lt;p&gt;Other resources:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://speakerdeck.com/anguscroll/how-we-learned-to-stop-worrying-and-love-javascript&#34;&gt;How we Learned to Stop Worrying and Love JavaScript&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div data-lift=&#34;embed?what=/templates-hidden/parts/js-lift-series&#34;&gt;&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>JavaScript Apps With Lift: Best Practices</title>
+      <link>/post/002-javascript-apps-with-lift-best-practices/</link>
+      <pubDate>Tue, 02 Apr 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/002-javascript-apps-with-lift-best-practices/</guid>
+      <description>
+
+&lt;p&gt;In this post I will discuss best practices for serving assets within the context of a Lift app. &lt;a href=&#34;https://developers.google.com/speed/docs/best-practices/rules_intro&#34; title=&#34;Google&#34;&gt;Google&lt;/a&gt; and &lt;a href=&#34;http://developer.yahoo.com/performance/rules.html&#34; title=&#34;Yahoo&#34;&gt;Yahoo&lt;/a&gt; have both published extensive material on this, so I won&amp;rsquo;t go over all of the details. I will just concentrate on the things directly related to developing webapps with Lift.&lt;/p&gt;
+
+&lt;h4 id=&#34;minimize-http-requests:b4770429861936cff1e4584f340e74ee&#34;&gt;Minimize HTTP Requests&lt;/h4&gt;
+
+&lt;p&gt;In general you should combine all of your JavaScript files into a single file. For landing pages there may be other things to consider.&lt;/p&gt;
+
+&lt;p&gt;By default, Lift loads a couple of files dynamically.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;liftAjax.js&lt;/em&gt;: You can turn this off and load it statically. Firstly, load your site and save the file, then in Boot.scala add the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;LiftRules.autoIncludeAjaxCalc.default.set(() =&amp;gt; (session: LiftSession) =&amp;gt; false)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you ever make changes to the settings that are used to create the file, just re-save the file. See &lt;a href=&#34;https://github.com/lift/framework/blob/master/web/webkit/src/main/scala/net/liftweb/http/js/ScriptRenderer.scala&#34;&gt;ScriptRenderer.scala&lt;/a&gt; for more details.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;cometAjax.js&lt;/em&gt;: This file inserts the user&amp;rsquo;s session id, so it must be loaded dynamically.&lt;/p&gt;
+
+&lt;h4 id=&#34;make-javascript-and-css-external:b4770429861936cff1e4584f340e74ee&#34;&gt;Make JavaScript and CSS External&lt;/h4&gt;
+
+&lt;p&gt;Put JavaScript code in external files instead of inlining. Lift inserts several inline &lt;code&gt;script&lt;/code&gt; tags related to Ajax and Comet requests. These are necessary and can&amp;rsquo;t be avoided. There also some functions in SHtml and some of the built-in snippets that produce inline &lt;code&gt;script&lt;/code&gt; tags, use these judiciosuly.&lt;/p&gt;
+
+&lt;p&gt;For your own code, use &lt;code&gt;S.appendJs&lt;/code&gt; whenever you can for any dynamic JavaScript code you need to send to the browser.&lt;/p&gt;
+
+&lt;h4 id=&#34;stylesheets-at-the-top-and-scripts-at-the-bottom:b4770429861936cff1e4584f340e74ee&#34;&gt;Stylesheets at the Top and Scripts at the Bottom&lt;/h4&gt;
+
+&lt;p&gt;CSS in the &lt;code&gt;header&lt;/code&gt; section. JavaScript just before the closing &lt;code&gt;body&lt;/code&gt; tag. With Lift, you should put your JavaScript after your content in the default.html file. Here&amp;rsquo;s an example:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;!DOCTYPE html&amp;gt;
+&amp;lt;html lang=&amp;quot;en&amp;quot;&amp;gt;
+  &amp;lt;head&amp;gt;
+    ...
+    &amp;lt;!-- css --&amp;gt;
+    &amp;lt;link href=&amp;quot;/assets/styles.css&amp;quot; rel=&amp;quot;stylesheet&amp;quot;&amp;gt;
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body&amp;gt;
+    &amp;lt;div id=&amp;quot;content&amp;quot; class=&amp;quot;container&amp;quot;&amp;gt;&amp;lt;/div&amp;gt;
+    &amp;lt;!-- javascript --&amp;gt;
+    &amp;lt;script src=&amp;quot;/assets/scripts.js&amp;quot;&amp;gt;&amp;lt;/script&amp;gt;
+  &amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;use-caching-or-a-cdn:b4770429861936cff1e4584f340e74ee&#34;&gt;Use Caching or a CDN&lt;/h3&gt;
+
+&lt;p&gt;If you can afford a CDN, that&amp;rsquo;s the best way to serve your assets. If not, you should follow these rules:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Set the expires header to between one month and a year. The intent is to have your users only ever load it one time. This means you will need to rename your file every time you launch a new version.&lt;/li&gt;
+&lt;li&gt;Do not use a query string on the asset URL. Some proxies will not cache assets with a query string on the URL.&lt;/li&gt;
+&lt;li&gt;Set a &lt;code&gt;Cache-Control: public&lt;/code&gt; header so proxies will cache the assets and share them among users.&lt;/li&gt;
+&lt;li&gt;Serve GZIP versions to browsers that accept them.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Here is an example nginx config:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;server {
+  listen 80;
+  server_name www.example.com;
+  access_log  /var/log/nginx/example.access.log;
+  error_page 502 =503 /maint.html;
+
+  location / {
+    proxy_pass          http://127.0.0.1:8080/;
+    proxy_set_header    X-Real-IP  $remote_addr;
+    proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header    Host $http_host;
+    proxy_read_timeout  700;
+  }
+
+  location ~ ^/(css|js|img)/  {
+    root /var/www/example;
+    expires 6M;
+    add_header Cache-Control public;
+  }
+
+  location = /maint.html {
+    root /var/www/example;
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;With this config, it&amp;rsquo;s required to copy the assets to the /var/www/example directory.&lt;/p&gt;
+
+&lt;div data-lift=&#34;embed?what=/templates-hidden/parts/js-lift-series&#34;&gt;&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Dealing with Boxed values in Lift snippets</title>
+      <link>/post/001-dealing-with-boxed-values-in-snippets/</link>
+      <pubDate>Tue, 26 Mar 2013 14:59:45 -0500</pubDate>
+      
+      <guid>/post/001-dealing-with-boxed-values-in-snippets/</guid>
+      <description>&lt;p&gt;This post will demonstrate how to handle Box(ed) values in Lift snippets using for comprehensions. This is what a first attempt might look like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;object MySnippet {
+  object SomeRequestVar extends RequestVar[Box[String]](Full(&amp;quot;nothing&amp;quot;))
+  def render =
+    for {
+      myVar &amp;lt;- SomeRequestVar.is ?~ &amp;quot;MyVar is not defined&amp;quot;
+      user &amp;lt;- User.currentUser ?~ &amp;quot;You must be logged in&amp;quot;
+    } yield ({
+      &amp;quot;#name&amp;quot; #&amp;gt; user.name.is
+    }) match {
+      case Full(csssel) =&amp;gt; csssel
+      case Failure(msg, _, _) =&amp;gt; &amp;quot;*&amp;quot; #&amp;gt; &amp;lt;div class=&amp;quot;error&amp;quot;&amp;gt;{msg}&amp;lt;/div&amp;gt;
+      case Empty =&amp;gt; &amp;quot;*&amp;quot; #&amp;gt; &amp;lt;div class=&amp;quot;error&amp;quot;&amp;gt;Empty&amp;lt;/div&amp;gt;
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s rather verbose and the last part that does the matching can be reused in all of your snippets. So, we can add an implicit conversion that will do that part for us.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;trait SnippetHelper {
+
+  def errorDiv(msg: String) = &amp;lt;div class=&amp;quot;error&amp;quot;&amp;gt;{msg}&amp;lt;/div&amp;gt;
+
+  implicit protected def boxCssSelToCssSel(in: Box[CssSel]): CssSel = in match {
+    case Full(csssel) =&amp;gt; csssel
+    case Failure(msg, _, _) =&amp;gt; &amp;quot;*&amp;quot; #&amp;gt; errorDiv(msg)
+    case Empty =&amp;gt; &amp;quot;*&amp;quot; #&amp;gt; errorDiv(&amp;quot;Unknown error&amp;quot;)
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The implicit conversion allows us to write our snippets like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;object MySnippet extends SnippetHelper {
+  object SomeRequestVar extends RequestVar[Box[String]](Full(&amp;quot;nothing&amp;quot;))
+  def render =
+    for {
+      myVar &amp;lt;- SomeRequestVar.is ?~ &amp;quot;MyVar is not defined&amp;quot;
+      user &amp;lt;- User.currentUser ?~ &amp;quot;You must be logged in&amp;quot;
+    } yield ({
+      &amp;quot;#name&amp;quot; #&amp;gt; user.name.is
+    }): CssSel
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note that the Scala compiler needs a little help so we must specify the type.&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s much better, but sometimes we need to use the same Box(ed) values in multiple render functions in the same snippet. This can be helped by a trick I learned from &lt;a href=&#34;https://github.com/timperrett/lift-shiro/blob/master/library/src/main/scala/shiro/snippet/snippets.scala#L12&#34; title=&#34;lift-shiro&#34;&gt;Tim Perrett&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;In your snippet you can do the following:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;object MySnippet extends SnippetHelper {
+  object SomeRequestVar extends RequestVar[Box[String]](Full(&amp;quot;nothing&amp;quot;))
+  private def serve(html: NodeSeq)(snip: (User, String) =&amp;gt; CssSel): NodeSeq =
+    (for {
+      u &amp;lt;- user ?~ &amp;quot;User not found&amp;quot;
+      myVar &amp;lt;- SomeRequestVar.is ?~ &amp;quot;MyVar is not defined&amp;quot;
+    } yield {
+      snip(u, myVar)(html)
+    }): NodeSeq
+
+  def renderName(html: NodeSeq): NodeSeq = serve(html) { (user, myVar) =&amp;gt;
+    &amp;quot;#name&amp;quot; #&amp;gt; user.name.is
+  }
+
+  def renderMyVar(html: NodeSeq): NodeSeq = serve(html) { (user, myVar) =&amp;gt;
+    &amp;quot;#myvar&amp;quot; #&amp;gt; myVar
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That encapsulates the for comprehension into the serve function, so your render functions are just the CSS selector transforms.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&#34;https://github.com/eltimn/lift-extras&#34;&gt;Lift Extras&lt;/a&gt; module includes a SnippetHelper class and other code to handle the HTML output.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> Parallel MongoRecord test execution with ScalaTest &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/007-parallel-mongorecord-test-execution/">Parallel MongoRecord test execution with ScalaTest</a></h1>
+      <span class="post-date">Jun 8, 2013 </span>
+      <div class="post-content">
+        <p>A few weeks ago, I finally figured out a way to enable parallel test execution of Lift MongoRecords using ScalaTest. The problem is when you call <code>MongoDB.defineDb</code> the entry is added to a Map with the MongoIdentifier as the key. So, you can&rsquo;t add more than one entry for the same MongoIdentifer, which means you can&rsquo;t use a different database for testing without doing them one at a time.</p>
+
+<p>The solution is rather simple and involves Lift&rsquo;s <a href="http://simply.liftweb.net/index-8.2.html#toc-Section-8.2">Dependency Injection mechanism</a>. It allows us to use a different MongoIdentifier for each test suite.</p>
+
+<p>First we need to define an injectable MongoIdentifier to add to our model&rsquo;s MongoMetaRecord. I put this in a MongoConfig object:</p>
+
+<pre><code>package code
+package config
+
+import net.liftweb._
+import http.Factory
+import mongodb._
+
+object MongoConfig extends Factory {
+
+  val identifier = new FactoryMaker[MongoIdentifier](DefaultMongoIdentifier) {}
+
+  ...
+
+}
+</code></pre>
+
+<p>Next we need to override <code>def mongoIdentifier</code> in our MongoMetaRecord objects. I create a custom MongoMetaRecord trait where I do this and mix that into my models instead of MongoMetaRecord:</p>
+
+<pre><code>package code
+package lib
+
+import code.config.MongoConfig
+
+import net.liftweb._
+import mongodb.record._
+
+/**
+  * A custom MongoMetaRecord that adds an injectable MongoIdentifier.
+  */
+trait MyMetaRecord[A &lt;: MongoRecord[A]] extends MongoMetaRecord[A] {
+  this: A =&gt;
+
+  override def mongoIdentifier = MongoConfig.identifier.vend
+}
+</code></pre>
+
+<p>Here&rsquo;s an example model that uses the above trait:</p>
+
+<pre><code>package code
+package model
+
+import code.lib.MyMetaRecord
+
+import scala.xml._
+
+import net.liftweb._
+import common._
+import mongodb.record._
+import record.field._
+
+class Company private () extends MongoRecord[Company] with ObjectIdPk[Company] {
+  def meta = Company
+
+  object name extends StringField(this, 256) {
+    override def displayName = &quot;Name&quot;
+
+    override def validations =
+      valMinLen(3, &quot;Must be at least 3 characters&quot;) _ ::
+      valMaxLen(256, &quot;Must be 256 characters or less&quot;) _ ::
+      super.validations
+  }
+}
+
+object Company extends Company with MyMetaRecord[Company] {
+  import mongodb.BsonDSL._
+
+  override def collectionName = &quot;main.companies&quot;
+
+  ensureIndex((name.name -&gt; 1), true)
+}
+</code></pre>
+
+<p>Now, you can use the Mongo Suite&rsquo;s defined in <a href="https://github.com/eltimn/lift-mongo.g8/blob/master/src/main/g8/src/test/scala/%24package%24/MongoTestKit.scala">MongoTestKit.scala</a> to create some traits to use with your tests:</p>
+
+<pre><code>package code
+
+import config.MongoConfig
+
+import org.scalatest._
+import org.scalatest.matchers.ShouldMatchers
+
+import net.liftweb._
+import common._
+import http._
+import util._
+import Helpers._
+
+trait BaseWordSpec extends WordSpec with ShouldMatchers
+
+trait BaseMongoWordSpec extends BaseWordSpec with MongoSuite {
+  def mongoIdentifier = MongoConfig.identifier
+}
+trait BaseMongoSessionWordSpec extends BaseWordSpec with MongoSessionSuite {
+  def mongoIdentifier = MongoConfig.identifier
+}
+
+trait WithSessionSpec extends AbstractSuite { this: Suite =&gt;
+
+  protected def session = new LiftSession(&quot;&quot;, randomString(20), Empty)
+
+  abstract override def withFixture(test: NoArgTest) {
+    S.initIfUninitted(session) { super.withFixture(test) }
+  }
+}
+</code></pre>
+
+<p>And, finally, write some tests:</p>
+
+<pre><code>package code
+package model
+
+class CompanySpec extends BaseMongoSessionWordSpec {
+  &quot;Company&quot; should {
+    ...
+  }
+}
+</code></pre>
+
+<p>The above code is available in the <a href="https://github.com/eltimn/lift-mongo.g8">lift-mongo.g8</a> giter8 template.</p>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+      
+      <a class="btn previous " href="/post/006-javascript-apps-with-lift-callback-build-tools/"> JavaScript Apps With Lift: Build Tools </a> 
+       
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>

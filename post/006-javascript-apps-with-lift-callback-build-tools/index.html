@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> JavaScript Apps With Lift: Build Tools &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/006-javascript-apps-with-lift-callback-build-tools/">JavaScript Apps With Lift: Build Tools</a></h1>
+      <span class="post-date">Apr 6, 2013 </span>
+      <div class="post-content">
+        
+
+<p>Now that we know how to organize and write our JavaScript code, we need a way to build our single file for use in production. There are several ways you can do this.</p>
+
+<h3 id="scala-build-tool:cf77155f1101ac8e538c7ed4b09e695d">Scala Build Tool</h3>
+
+<p>Most build tools have plugins for this, whether you&rsquo;re using SBT, Maven, or Gradle. I&rsquo;m an SBT user, so I&rsquo;ve been using <a href="https://github.com/eltimn/sbt-closure">sbt-closure</a> and <a href="https://github.com/softprops/less-sbt">less-sbt</a>. However, these are extremely slow, the SBT plugins, that is. I haven&rsquo;t used the other build tools. Also, it&rsquo;s not necessary to run google closure every time a change is made. This really only needs to be done once, when packaging for deployment.</p>
+
+<h3 id="sbt-resource-management-https-github-com-shadowfiend-sbt-resource-management:cf77155f1101ac8e538c7ed4b09e695d"><a href="https://github.com/Shadowfiend/sbt-resource-management">sbt-resource-management</a></h3>
+
+<p>This is a sbt plugin along with a snippet to be used in your Lift app. It allows you to define bundles of files, which the snippet either loads indvidually or as a single file, depending on whether you&rsquo;re in development or production mode. The only problem I had with this was that I use Twitter Bootstrap&rsquo;s less source files and there isn&rsquo;t a way to specify a single file to process. It only has a directory setting. So it processes all of the less files instead of only the single file that I need processed.</p>
+
+<h3 id="grunt-http-gruntjs-com:cf77155f1101ac8e538c7ed4b09e695d"><a href="http://gruntjs.com/">Grunt</a></h3>
+
+<p>Grunt is a build tool written in JavaScript as a Node module. It requires Node and npm, but it&rsquo;s super fast at concatenating JavaScript files and compiling LESS sources. It&rsquo;s also pretty easy to learn how to us if you already know JavaScript.</p>
+
+<p>The <a href="https://github.com/eltimn/lift-extras/tree/master/example">Lift Extras example app</a> uses Grunt for building the JavaScript and CSS. In addition to concatenating JavaScript files and compiling LESS sources it has tasks that runs a <code>linter</code> on your JavaScript code via <a href="http://www.jshint.com/">JsHint</a>, runs your JavaScript tests via <a href="http://pivotal.github.io/jasmine/">Jasmine</a>, and minifies your JavaScript via <a href="http://lisperator.net/uglifyjs/">UglifyJs</a>. It also has a watch task that will &ldquo;compile&rdquo; your code when any files change. So it will run automatically when you save the file in your editor.</p>
+
+<p>See the app&rsquo;s <a href="https://github.com/eltimn/lift-extras/blob/master/example/Gruntfile.js">Gruntfile.js</a> for more details.</p>
+
+<p>This is currently my preferred tool to use. The only problem I&rsquo;ve run into is that I use SBT to generate a package.json file that is used by Grunt to create the files. Sometimes, the two can get out of sync.</p>
+
+<p>You may also want to check out <a href="http://twitter.github.io/bower/">Bower</a>. It&rsquo;s a dependency manager for JavaScript and CSS.</p>
+
+<div data-lift="embed?what=/templates-hidden/parts/js-lift-series"></div>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+      
+      <a class="btn previous " href="/post/005-javascript-apps-with-lift-callback-jsclass/"> JavaScript Apps With Lift: JsClass </a> 
+       
+      
+      <a class="btn next " href="/post/007-parallel-mongorecord-test-execution/"> Parallel MongoRecord test execution with ScalaTest </a> 
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>

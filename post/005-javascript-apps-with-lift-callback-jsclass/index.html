@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> JavaScript Apps With Lift: JsClass &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/005-javascript-apps-with-lift-callback-jsclass/">JavaScript Apps With Lift: JsClass</a></h1>
+      <span class="post-date">Apr 5, 2013 </span>
+      <div class="post-content">
+        <p>The <a href="https://github.com/eltimn/lift-extras">Lift Extras</a> module adds some convenience classes to help with interfacing between your Scala snippet code and your JavaScript code.</p>
+
+<p>In my <a href="http://www.eltimn.com/blog/004-javascript-apps-with-lift-callback-functions">last post</a> the code used to initialize the JavaScript code from within the snippet looked like this (minus the knockout binding call):</p>
+
+<pre><code>val onload: JsCmd =
+  SetExp(
+    JsVar(&quot;window.koExample&quot;),
+    JsExtras.CallNew(
+      &quot;App.views.knockout.KnockoutExampleCls&quot;,
+      JsExtras.AjaxCallbackAnonFunc(sendSucces),
+      JsExtras.JsonCallbackAnonFunc(saveForm),
+    )
+  )
+)
+</code></pre>
+
+<p>Elsewhere, there&rsquo;s a call to a function on the JavaScript class:</p>
+
+<pre><code>Call(&quot;window.koExample.textInput&quot;, Str(&quot;&quot;))
+</code></pre>
+
+<p>There are a couple of things that bother me about this. <code>window.koExample</code> is referenced in multiple places. The <code>SetExp</code> call is similar for all JavaScript classes.</p>
+
+<p><a href="https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsClass.scala">JsClass and KoClass</a> aim to help with those things. They provide a way to encapsulate some of the details of your JavaScript code and functions for calling functions on your JavaScript code. Using JsClass would change the above code to:</p>
+
+<pre><code>val jsClass = JsClass(&quot;App.views.knockout.KnockoutExampleCls&quot;, &quot;window.koExample&quot;)
+
+val onload: JsCmd = jsClass.init(
+  JsExtras.AjaxCallbackAnonFunc(sendSucces),
+  JsExtras.JsonCallbackAnonFunc(saveForm)
+)
+</code></pre>
+
+<p>And, where you need to call a function on your JavaScript class use:</p>
+
+<pre><code>jsClass.call(&quot;textInput&quot;, Str(&quot;&quot;))
+</code></pre>
+
+<p>There is a also a <a href="http://knockoutjs.com/">knockout.js</a> version, KoClass, that adds the ko binding call to the init function. The above example would look like this:</p>
+
+<pre><code>val koClass = KoClass(&quot;App.views.knockout.KnockoutExampleCls&quot;, &quot;window.koExample&quot;, &quot;knockout-example-cls&quot;)
+
+val onload: JsCmd = koClass.init(
+  JsExtras.AjaxCallbackAnonFunc(sendSucces),
+  JsExtras.JsonCallbackAnonFunc(saveForm)
+)
+</code></pre>
+
+<p>Similar classes also exist for the module versions of the above: <a href="https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsModule.scala">JsModule and KoModule</a></p>
+
+<div data-lift="embed?what=/templates-hidden/parts/js-lift-series"></div>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+      
+      <a class="btn previous " href="/post/004-javascript-apps-with-lift-callback-functions/"> JavaScript Apps With Lift: Callback Functions </a> 
+       
+      
+      <a class="btn next " href="/post/006-javascript-apps-with-lift-callback-build-tools/"> JavaScript Apps With Lift: Build Tools </a> 
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>

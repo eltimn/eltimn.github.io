@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> JavaScript Apps With Lift: Callback Functions &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/004-javascript-apps-with-lift-callback-functions/">JavaScript Apps With Lift: Callback Functions</a></h1>
+      <span class="post-date">Apr 4, 2013 </span>
+      <div class="post-content">
+        <p>One of my favorite features of Lift is the ability to call functions on the server via ajax. This is mostly achieved using built in features. However, I also like to be able to call these functions via JavaScript directly. So, I created some functions to help with this.</p>
+
+<p>First, let&rsquo;s take a look at <a href="https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsExtras.scala" title="JsExtras">AjaxCallbackAnonFunc</a>:</p>
+
+<pre><code> object AjaxCallbackAnonFunc {
+    def apply(callback: () =&gt; JsCmd): AnonFunc = {
+      val funcCmd = S.fmapFunc(S.SFuncHolder(s =&gt; callback()))(name =&gt;
+        SHtml.makeAjaxCall(JsRaw(&quot;'&quot; + name + &quot;=true'&quot;))
+      )
+      AnonFunc(funcCmd)
+    }
+  }
+</code></pre>
+
+<p>This creates an anonymous JavaScript function that calls the callback function via Ajax and executes the return JsCmd on the client.</p>
+
+<p>There is also <a href="https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsExtras.scala" title="JsExtras">JsonCallbackAnonFunc</a>:</p>
+
+<pre><code>object JsonCallbackAnonFunc {
+  def apply(callback: JValue =&gt; JsCmd): AnonFunc = {
+    val funcCmd = S.fmapFunc(S.SFuncHolder(s =&gt; LiftExtras.parseJsonFunc.vend(s, callback)))(name =&gt;
+      SHtml.makeAjaxCall(JsRaw(&quot;'&quot; + name + &quot;=' + encodeURIComponent(JSON.stringify(data))&quot;))
+    )
+    AnonFunc(&quot;data&quot;, funcCmd)
+  }
+}
+</code></pre>
+
+<p>This creates an anonymous JavaScript function that takes JSON data as a parameter and sends it to a callback function via Ajax and executes the return JsCmd on the client.</p>
+
+<p>Here&rsquo;s an example snippet that uses both:</p>
+
+<pre><code>object KnockoutExampleCls extends SnippetHelper with Loggable {
+
+  def render(in: NodeSeq): NodeSeq = {
+    /**
+      * A test function that sends a success notice back to the client.
+      */
+    def sendSuccess(): JsCmd = LiftNotice.success(&lt;em&gt;You have success&lt;/em&gt;).asJsCmd
+
+    /**
+      * The function to call when submitting the form.
+      */
+    def saveForm(json: JValue): JsCmd = {
+      for {
+        msg &lt;- tryo((json \ &quot;textInput&quot;).extract[String])
+      } yield {
+        val logMsg = &quot;textInput from client: &quot;+msg
+        logger.info(logMsg)
+        S.notice(logMsg)
+        Call(&quot;window.koExample.textInput&quot;, Str(&quot;&quot;)): JsCmd
+      }
+    }
+
+    /**
+      * Initialize the knockout view model, passing it the anonymous functions
+      */
+    val onload: JsCmd =
+      SetExp(
+        JsVar(&quot;window.koExample&quot;),
+        JsExtras.CallNew(
+          &quot;App.views.knockout.KnockoutExampleCls&quot;,
+          JsExtras.AjaxCallbackAnonFunc(sendSucces),
+          JsExtras.JsonCallbackAnonFunc(saveForm),
+        )
+      ) &amp;
+      Call(&quot;ko.applyBindings&quot;, JsVar(&quot;window.koExample&quot;), Call(&quot;document.getElementById&quot;, &quot;knockout-example-cls&quot;))
+    )
+
+    S.appendJs(onload)
+
+    in
+  }
+}
+</code></pre>
+
+<p>Which outputs the following JavaScript:</p>
+
+<pre><code>&lt;script type=&quot;text/javascript&quot;&gt;
+// &lt;![CDATA[
+jQuery(document).ready(function() {
+  window.koExample = new App.views.knockout.KnockoutExampleCls(
+    function() {
+      liftAjax.lift_ajaxHandler('F301359182285033KTB=true', null, null, null);
+    },
+    function(data) {
+      liftAjax.lift_ajaxHandler('F301359182286FERFGB=' + encodeURIComponent(JSON.stringify(data)), null, null, null);
+    }
+  );
+  ko.applyBindings(window.koExample, document.getElementById(&quot;knockout-example-cls&quot;));
+// ]]&gt;
+&lt;/script&gt;
+</code></pre>
+
+<p>The JavaScript view model class is:</p>
+
+<pre><code>App.namespace(&quot;views.knockout&quot;);
+App.views.knockout.KnockoutExampleCls = function(sendSuccess, saveFunc) {
+  &quot;use strict&quot;;
+
+  var self = this;
+
+  self.textInput = ko.observable(&quot;&quot;);
+
+  self.submitForm = function() {
+    var ret = { textInput: self.textInput() };
+    // call the passed in save function with the form data as an argument.
+    saveFunc(ret);
+  };
+
+  self.sendSuccess = sendSuccess;
+
+  self.showWarning = function() {
+    // sends a notice to the client
+    $(document).trigger(&quot;add-alerts&quot;, {message: &quot;&lt;em&gt;This is a warning!&lt;/em&gt;&quot;, priority: &quot;warning&quot;});
+  };
+};
+</code></pre>
+
+<p>Notice how the functions are passed into the JavaScript code as parameters to the view model class. You now have the ability to call either of these functions in your JavaScript code.</p>
+
+<p>I like this technique because all of your code is in one place and you can close over any data you may need in the snippet. It may not be as secure as some of Lift&rsquo;s built in stuff, but it&rsquo;s still more secure and faster and easier to write than calling APIs directly. However, if you need to provide a public API anyway it may make sense to use that.</p>
+
+<div data-lift="embed?what=/templates-hidden/parts/js-lift-series"></div>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+      
+      <a class="btn previous " href="/post/003-javascript-apps-with-lift-organization/"> JavaScript Apps With Lift: Organization </a> 
+       
+      
+      <a class="btn next " href="/post/005-javascript-apps-with-lift-callback-jsclass/"> JavaScript Apps With Lift: JsClass </a> 
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>

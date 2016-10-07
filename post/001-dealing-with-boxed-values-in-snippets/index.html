@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> Dealing with Boxed values in Lift snippets &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/001-dealing-with-boxed-values-in-snippets/">Dealing with Boxed values in Lift snippets</a></h1>
+      <span class="post-date">Mar 26, 2013 </span>
+      <div class="post-content">
+        <p>This post will demonstrate how to handle Box(ed) values in Lift snippets using for comprehensions. This is what a first attempt might look like:</p>
+
+<pre><code>object MySnippet {
+  object SomeRequestVar extends RequestVar[Box[String]](Full(&quot;nothing&quot;))
+  def render =
+    for {
+      myVar &lt;- SomeRequestVar.is ?~ &quot;MyVar is not defined&quot;
+      user &lt;- User.currentUser ?~ &quot;You must be logged in&quot;
+    } yield ({
+      &quot;#name&quot; #&gt; user.name.is
+    }) match {
+      case Full(csssel) =&gt; csssel
+      case Failure(msg, _, _) =&gt; &quot;*&quot; #&gt; &lt;div class=&quot;error&quot;&gt;{msg}&lt;/div&gt;
+      case Empty =&gt; &quot;*&quot; #&gt; &lt;div class=&quot;error&quot;&gt;Empty&lt;/div&gt;
+    }
+  }
+}
+</code></pre>
+
+<p>That&rsquo;s rather verbose and the last part that does the matching can be reused in all of your snippets. So, we can add an implicit conversion that will do that part for us.</p>
+
+<pre><code>trait SnippetHelper {
+
+  def errorDiv(msg: String) = &lt;div class=&quot;error&quot;&gt;{msg}&lt;/div&gt;
+
+  implicit protected def boxCssSelToCssSel(in: Box[CssSel]): CssSel = in match {
+    case Full(csssel) =&gt; csssel
+    case Failure(msg, _, _) =&gt; &quot;*&quot; #&gt; errorDiv(msg)
+    case Empty =&gt; &quot;*&quot; #&gt; errorDiv(&quot;Unknown error&quot;)
+  }
+}
+</code></pre>
+
+<p>The implicit conversion allows us to write our snippets like this:</p>
+
+<pre><code>object MySnippet extends SnippetHelper {
+  object SomeRequestVar extends RequestVar[Box[String]](Full(&quot;nothing&quot;))
+  def render =
+    for {
+      myVar &lt;- SomeRequestVar.is ?~ &quot;MyVar is not defined&quot;
+      user &lt;- User.currentUser ?~ &quot;You must be logged in&quot;
+    } yield ({
+      &quot;#name&quot; #&gt; user.name.is
+    }): CssSel
+  }
+}
+</code></pre>
+
+<p>Note that the Scala compiler needs a little help so we must specify the type.</p>
+
+<p>That&rsquo;s much better, but sometimes we need to use the same Box(ed) values in multiple render functions in the same snippet. This can be helped by a trick I learned from <a href="https://github.com/timperrett/lift-shiro/blob/master/library/src/main/scala/shiro/snippet/snippets.scala#L12" title="lift-shiro">Tim Perrett</a>.</p>
+
+<p>In your snippet you can do the following:</p>
+
+<pre><code>object MySnippet extends SnippetHelper {
+  object SomeRequestVar extends RequestVar[Box[String]](Full(&quot;nothing&quot;))
+  private def serve(html: NodeSeq)(snip: (User, String) =&gt; CssSel): NodeSeq =
+    (for {
+      u &lt;- user ?~ &quot;User not found&quot;
+      myVar &lt;- SomeRequestVar.is ?~ &quot;MyVar is not defined&quot;
+    } yield {
+      snip(u, myVar)(html)
+    }): NodeSeq
+
+  def renderName(html: NodeSeq): NodeSeq = serve(html) { (user, myVar) =&gt;
+    &quot;#name&quot; #&gt; user.name.is
+  }
+
+  def renderMyVar(html: NodeSeq): NodeSeq = serve(html) { (user, myVar) =&gt;
+    &quot;#myvar&quot; #&gt; myVar
+  }
+}
+</code></pre>
+
+<p>That encapsulates the for comprehension into the serve function, so your render functions are just the CSS selector transforms.</p>
+
+<p>The <a href="https://github.com/eltimn/lift-extras">Lift Extras</a> module includes a SnippetHelper class and other code to handle the HTML output.</p>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+       
+      
+      <a class="btn next " href="/post/002-javascript-apps-with-lift-best-practices/"> JavaScript Apps With Lift: Best Practices </a> 
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>

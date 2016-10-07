@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> JavaScript Apps With Lift: Best Practices &middot; eltimn </title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.15" />
+
+
+<link rel="stylesheet" href="css/vec.css">
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+<link rel="shortcut icon" href="/favicon.ico">
+
+
+<link href="" rel="alternate" type="application/rss+xml" title="eltimn" />
+
+</head>
+
+<body>
+  <header>
+  <nav>
+    <ul>
+      
+      
+      <li class="pull-left ">
+        <a href="">/home/eltimn</a>
+      </li>
+      
+  
+      <li class="pull-right"><a href=""><i class="fa fa-rss"></i></a></li>
+    </ul>
+  </nav>
+</header>
+  <div class="content">
+    
+    
+    <section class="post">
+      <h1 class="post-title"><a href="/post/002-javascript-apps-with-lift-best-practices/">JavaScript Apps With Lift: Best Practices</a></h1>
+      <span class="post-date">Apr 2, 2013 </span>
+      <div class="post-content">
+        
+
+<p>In this post I will discuss best practices for serving assets within the context of a Lift app. <a href="https://developers.google.com/speed/docs/best-practices/rules_intro" title="Google">Google</a> and <a href="http://developer.yahoo.com/performance/rules.html" title="Yahoo">Yahoo</a> have both published extensive material on this, so I won&rsquo;t go over all of the details. I will just concentrate on the things directly related to developing webapps with Lift.</p>
+
+<h4 id="minimize-http-requests:b4770429861936cff1e4584f340e74ee">Minimize HTTP Requests</h4>
+
+<p>In general you should combine all of your JavaScript files into a single file. For landing pages there may be other things to consider.</p>
+
+<p>By default, Lift loads a couple of files dynamically.</p>
+
+<p><em>liftAjax.js</em>: You can turn this off and load it statically. Firstly, load your site and save the file, then in Boot.scala add the following:</p>
+
+<pre><code>LiftRules.autoIncludeAjaxCalc.default.set(() =&gt; (session: LiftSession) =&gt; false)
+</code></pre>
+
+<p>If you ever make changes to the settings that are used to create the file, just re-save the file. See <a href="https://github.com/lift/framework/blob/master/web/webkit/src/main/scala/net/liftweb/http/js/ScriptRenderer.scala">ScriptRenderer.scala</a> for more details.</p>
+
+<p><em>cometAjax.js</em>: This file inserts the user&rsquo;s session id, so it must be loaded dynamically.</p>
+
+<h4 id="make-javascript-and-css-external:b4770429861936cff1e4584f340e74ee">Make JavaScript and CSS External</h4>
+
+<p>Put JavaScript code in external files instead of inlining. Lift inserts several inline <code>script</code> tags related to Ajax and Comet requests. These are necessary and can&rsquo;t be avoided. There also some functions in SHtml and some of the built-in snippets that produce inline <code>script</code> tags, use these judiciosuly.</p>
+
+<p>For your own code, use <code>S.appendJs</code> whenever you can for any dynamic JavaScript code you need to send to the browser.</p>
+
+<h4 id="stylesheets-at-the-top-and-scripts-at-the-bottom:b4770429861936cff1e4584f340e74ee">Stylesheets at the Top and Scripts at the Bottom</h4>
+
+<p>CSS in the <code>header</code> section. JavaScript just before the closing <code>body</code> tag. With Lift, you should put your JavaScript after your content in the default.html file. Here&rsquo;s an example:</p>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+  &lt;head&gt;
+    ...
+    &lt;!-- css --&gt;
+    &lt;link href=&quot;/assets/styles.css&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div id=&quot;content&quot; class=&quot;container&quot;&gt;&lt;/div&gt;
+    &lt;!-- javascript --&gt;
+    &lt;script src=&quot;/assets/scripts.js&quot;&gt;&lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<h3 id="use-caching-or-a-cdn:b4770429861936cff1e4584f340e74ee">Use Caching or a CDN</h3>
+
+<p>If you can afford a CDN, that&rsquo;s the best way to serve your assets. If not, you should follow these rules:</p>
+
+<ul>
+<li>Set the expires header to between one month and a year. The intent is to have your users only ever load it one time. This means you will need to rename your file every time you launch a new version.</li>
+<li>Do not use a query string on the asset URL. Some proxies will not cache assets with a query string on the URL.</li>
+<li>Set a <code>Cache-Control: public</code> header so proxies will cache the assets and share them among users.</li>
+<li>Serve GZIP versions to browsers that accept them.</li>
+</ul>
+
+<p>Here is an example nginx config:</p>
+
+<pre><code>server {
+  listen 80;
+  server_name www.example.com;
+  access_log  /var/log/nginx/example.access.log;
+  error_page 502 =503 /maint.html;
+
+  location / {
+    proxy_pass          http://127.0.0.1:8080/;
+    proxy_set_header    X-Real-IP  $remote_addr;
+    proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header    Host $http_host;
+    proxy_read_timeout  700;
+  }
+
+  location ~ ^/(css|js|img)/  {
+    root /var/www/example;
+    expires 6M;
+    add_header Cache-Control public;
+  }
+
+  location = /maint.html {
+    root /var/www/example;
+  }
+}
+</code></pre>
+
+<p>With this config, it&rsquo;s required to copy the assets to the /var/www/example directory.</p>
+
+<div data-lift="embed?what=/templates-hidden/parts/js-lift-series"></div>
+
+      </div>
+    </section>
+    
+    <section class="pagination clearfix">
+      
+      <a class="btn previous " href="/post/001-dealing-with-boxed-values-in-snippets/"> Dealing with Boxed values in Lift snippets </a> 
+       
+      
+      <a class="btn next " href="/post/003-javascript-apps-with-lift-organization/"> JavaScript Apps With Lift: Organization </a> 
+      
+    </section>
+    
+    
+  </div>
+  
+  <footer>
+  <div class="footer-info">
+    <p>
+      <a href="mailto:?subject="><i class="fa fa-envelope-o"></i>  </a>
+      {
+        <a href="https://gohugo.io/" title="Hugo :: A fast and modern static website engine">Hugo 0.15</a>,
+        <a href="https://github.com/IvanChou/yii.im" title="vec">Vec</a> 
+      }
+      {<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="CC BY-NC-ND 3.0">CC BY-NC-ND 3.0</a>}
+    </p>
+  </div>
+</footer>
+  
+  <script src="js/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+  
+
+</body>
+
+</html>
