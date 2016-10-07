@@ -2,19 +2,19 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>eltimn</title>
-    <link>/</link>
+    <link>http://www.eltimn.com/</link>
     <description>Recent content on eltimn</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 08 Jun 2013 14:59:45 -0500</lastBuildDate>
-    <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://www.eltimn.com/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Parallel MongoRecord test execution with ScalaTest</title>
-      <link>/post/007-parallel-mongorecord-test-execution/</link>
+      <link>http://www.eltimn.com/post/007-parallel-mongorecord-test-execution/</link>
       <pubDate>Sat, 08 Jun 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/007-parallel-mongorecord-test-execution/</guid>
+      <guid>http://www.eltimn.com/post/007-parallel-mongorecord-test-execution/</guid>
       <description>&lt;p&gt;A few weeks ago, I finally figured out a way to enable parallel test execution of Lift MongoRecords using ScalaTest. The problem is when you call &lt;code&gt;MongoDB.defineDb&lt;/code&gt; the entry is added to a Map with the MongoIdentifier as the key. So, you can&amp;rsquo;t add more than one entry for the same MongoIdentifer, which means you can&amp;rsquo;t use a different database for testing without doing them one at a time.&lt;/p&gt;
 
 &lt;p&gt;The solution is rather simple and involves Lift&amp;rsquo;s &lt;a href=&#34;http://simply.liftweb.net/index-8.2.html#toc-Section-8.2&#34;&gt;Dependency Injection mechanism&lt;/a&gt;. It allows us to use a different MongoIdentifier for each test suite.&lt;/p&gt;
@@ -145,10 +145,10 @@ class CompanySpec extends BaseMongoSessionWordSpec {
     
     <item>
       <title>JavaScript Apps With Lift: Build Tools</title>
-      <link>/post/006-javascript-apps-with-lift-callback-build-tools/</link>
+      <link>http://www.eltimn.com/post/006-javascript-apps-with-lift-callback-build-tools/</link>
       <pubDate>Sat, 06 Apr 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/006-javascript-apps-with-lift-callback-build-tools/</guid>
+      <guid>http://www.eltimn.com/post/006-javascript-apps-with-lift-callback-build-tools/</guid>
       <description>
 
 &lt;p&gt;Now that we know how to organize and write our JavaScript code, we need a way to build our single file for use in production. There are several ways you can do this.&lt;/p&gt;
@@ -179,10 +179,10 @@ class CompanySpec extends BaseMongoSessionWordSpec {
     
     <item>
       <title>JavaScript Apps With Lift: JsClass</title>
-      <link>/post/005-javascript-apps-with-lift-callback-jsclass/</link>
+      <link>http://www.eltimn.com/post/005-javascript-apps-with-lift-callback-jsclass/</link>
       <pubDate>Fri, 05 Apr 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/005-javascript-apps-with-lift-callback-jsclass/</guid>
+      <guid>http://www.eltimn.com/post/005-javascript-apps-with-lift-callback-jsclass/</guid>
       <description>&lt;p&gt;The &lt;a href=&#34;https://github.com/eltimn/lift-extras&#34;&gt;Lift Extras&lt;/a&gt; module adds some convenience classes to help with interfacing between your Scala snippet code and your JavaScript code.&lt;/p&gt;
 
 &lt;p&gt;In my &lt;a href=&#34;http://www.eltimn.com/blog/004-javascript-apps-with-lift-callback-functions&#34;&gt;last post&lt;/a&gt; the code used to initialize the JavaScript code from within the snippet looked like this (minus the knockout binding call):&lt;/p&gt;
@@ -239,10 +239,10 @@ val onload: JsCmd = koClass.init(
     
     <item>
       <title>JavaScript Apps With Lift: Callback Functions</title>
-      <link>/post/004-javascript-apps-with-lift-callback-functions/</link>
+      <link>http://www.eltimn.com/post/004-javascript-apps-with-lift-callback-functions/</link>
       <pubDate>Thu, 04 Apr 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/004-javascript-apps-with-lift-callback-functions/</guid>
+      <guid>http://www.eltimn.com/post/004-javascript-apps-with-lift-callback-functions/</guid>
       <description>&lt;p&gt;One of my favorite features of Lift is the ability to call functions on the server via ajax. This is mostly achieved using built in features. However, I also like to be able to call these functions via JavaScript directly. So, I created some functions to help with this.&lt;/p&gt;
 
 &lt;p&gt;First, let&amp;rsquo;s take a look at &lt;a href=&#34;https://github.com/eltimn/lift-extras/blob/master/library/src/main/scala/net/liftmodules/extras/JsExtras.scala&#34; title=&#34;JsExtras&#34;&gt;AjaxCallbackAnonFunc&lt;/a&gt;:&lt;/p&gt;
@@ -372,10 +372,10 @@ App.views.knockout.KnockoutExampleCls = function(sendSuccess, saveFunc) {
     
     <item>
       <title>JavaScript Apps With Lift: Organization</title>
-      <link>/post/003-javascript-apps-with-lift-organization/</link>
+      <link>http://www.eltimn.com/post/003-javascript-apps-with-lift-organization/</link>
       <pubDate>Wed, 03 Apr 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/003-javascript-apps-with-lift-organization/</guid>
+      <guid>http://www.eltimn.com/post/003-javascript-apps-with-lift-organization/</guid>
       <description>&lt;p&gt;With the goal of putting as much of our JavaScript code in external files and combing them into a single file, there are several ways to organize your code. A lot of developers are moving towards using an &lt;a href=&#34;https://github.com/amdjs/amdjs-api/wiki/AMD&#34;&gt;AMD&lt;/a&gt; loader, in particular &lt;a href=&#34;http://requirejs.org/&#34;&gt;RequireJS&lt;/a&gt; for webapps. With this, each of your JavaScript files will basically list the files it depends on and they are loaded by the loader. So, only the files you need are loaded. That&amp;rsquo;s only recommended for development, though. For production, all of the files are combined using an optimizer.&lt;/p&gt;
 
 &lt;p&gt;Another approach is to use a single global object to put all of your code into. This is to minimize polluting the global namespace. One problem with this approach is that you need to make sure you create the sub objects for each namespace. For example, if you had this:&lt;/p&gt;
@@ -557,10 +557,10 @@ window.koExample.showWarning();
     
     <item>
       <title>JavaScript Apps With Lift: Best Practices</title>
-      <link>/post/002-javascript-apps-with-lift-best-practices/</link>
+      <link>http://www.eltimn.com/post/002-javascript-apps-with-lift-best-practices/</link>
       <pubDate>Tue, 02 Apr 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/002-javascript-apps-with-lift-best-practices/</guid>
+      <guid>http://www.eltimn.com/post/002-javascript-apps-with-lift-best-practices/</guid>
       <description>
 
 &lt;p&gt;In this post I will discuss best practices for serving assets within the context of a Lift app. &lt;a href=&#34;https://developers.google.com/speed/docs/best-practices/rules_intro&#34; title=&#34;Google&#34;&gt;Google&lt;/a&gt; and &lt;a href=&#34;http://developer.yahoo.com/performance/rules.html&#34; title=&#34;Yahoo&#34;&gt;Yahoo&lt;/a&gt; have both published extensive material on this, so I won&amp;rsquo;t go over all of the details. I will just concentrate on the things directly related to developing webapps with Lift.&lt;/p&gt;
@@ -652,10 +652,10 @@ window.koExample.showWarning();
     
     <item>
       <title>Dealing with Boxed values in Lift snippets</title>
-      <link>/post/001-dealing-with-boxed-values-in-snippets/</link>
+      <link>http://www.eltimn.com/post/001-dealing-with-boxed-values-in-snippets/</link>
       <pubDate>Tue, 26 Mar 2013 14:59:45 -0500</pubDate>
       
-      <guid>/post/001-dealing-with-boxed-values-in-snippets/</guid>
+      <guid>http://www.eltimn.com/post/001-dealing-with-boxed-values-in-snippets/</guid>
       <description>&lt;p&gt;This post will demonstrate how to handle Box(ed) values in Lift snippets using for comprehensions. This is what a first attempt might look like:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;object MySnippet {

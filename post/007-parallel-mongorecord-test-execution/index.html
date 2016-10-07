@@ -9,7 +9,7 @@
 <meta name="generator" content="Hugo 0.15" />
 
 
-<link rel="stylesheet" href="css/vec.css">
+<link rel="stylesheet" href="http://www.eltimn.com/css/vec.css">
 
 
 <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
@@ -27,7 +27,12 @@
       
       
       <li class="pull-left ">
-        <a href="">/home/eltimn</a>
+        <a href="http://www.eltimn.com">/home/eltimn</a>
+      </li>
+      
+      
+      <li class="pull-left current">
+        <a href="/post/">~/post</a>
       </li>
       
   
@@ -39,7 +44,7 @@
     
     
     <section class="post">
-      <h1 class="post-title"><a href="/post/007-parallel-mongorecord-test-execution/">Parallel MongoRecord test execution with ScalaTest</a></h1>
+      <h1 class="post-title"><a href="http://www.eltimn.com/post/007-parallel-mongorecord-test-execution/">Parallel MongoRecord test execution with ScalaTest</a></h1>
       <span class="post-date">Jun 8, 2013 </span>
       <div class="post-content">
         <p>A few weeks ago, I finally figured out a way to enable parallel test execution of Lift MongoRecords using ScalaTest. The problem is when you call <code>MongoDB.defineDb</code> the entry is added to a Map with the MongoIdentifier as the key. So, you can&rsquo;t add more than one entry for the same MongoIdentifer, which means you can&rsquo;t use a different database for testing without doing them one at a time.</p>
@@ -173,7 +178,7 @@ class CompanySpec extends BaseMongoSessionWordSpec {
     
     <section class="pagination clearfix">
       
-      <a class="btn previous " href="/post/006-javascript-apps-with-lift-callback-build-tools/"> JavaScript Apps With Lift: Build Tools </a> 
+      <a class="btn previous " href="http://www.eltimn.com/post/006-javascript-apps-with-lift-callback-build-tools/"> JavaScript Apps With Lift: Build Tools </a> 
        
       
     </section>
@@ -194,7 +199,7 @@ class CompanySpec extends BaseMongoSessionWordSpec {
   </div>
 </footer>
   
-  <script src="js/highlight.min.js"></script>
+  <script src="http://www.eltimn.com/js/highlight.min.js"></script>
   <script>
     hljs.initHighlightingOnLoad();
   </script>
